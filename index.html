@@ -153,7 +153,10 @@
   const throwback = document.getElementById('throwback');
 
   document.getElementById('loginBtn').addEventListener('click', () => {
-    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+  });
+  auth.getRedirectResult().catch(err => {
+    msg.textContent = 'ログインに失敗しました。もう一度お試しください。';
   });
 
   function startOfDay(ts) { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
