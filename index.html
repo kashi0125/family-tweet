@@ -78,7 +78,7 @@
   <div class="wrap">
     <header>
       <h1>ひとこと便り</h1>
-      <p class="sub">1週間後と、1年後の今日だけ届きます</p>
+      <p class="sub">1週間後に家族にそっと届きます。（他人には公開されません）</p>
     </header>
 
     <div class="card">
@@ -138,7 +138,7 @@
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
       textEl.value = '';
-      msg.textContent = '届きました。1週間後にそっと公開されます。';
+      msg.textContent = '送信完了しました';
     } catch (e) {
       msg.textContent = '送信に失敗しました。もう一度お試しください。';
     }
