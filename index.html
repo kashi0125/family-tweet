@@ -12,15 +12,12 @@
     --ink-soft: #6B6459; --line: #DCD3C0; --accent: #2F6259;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink);
-    font-family: "Zen Maru Gothic", sans-serif;
-  }
+  body { margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink); font-family: "Zen Maru Gothic", sans-serif; }
   .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
   header { margin-bottom: 18px; }
   h1 { font-size: 22px; font-weight: 900; margin: 4px 0 2px; letter-spacing: .02em; }
   .sub { font-size: 13px; color: var(--ink-soft); margin: 0; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; margin-bottom: 18px; }
   label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 4px; }
   input, textarea {
     width: 100%; font-family: inherit; font-size: 15px; color: var(--ink);
@@ -35,7 +32,46 @@
   }
   button.post:disabled { opacity: .5; }
   .msg { margin-top: 14px; font-size: 13px; color: var(--accent); text-align: center; min-height: 16px; }
+
+  .login-link { text-align: center; margin: 18px 0; }
+  .login-link button {
+    font-family: inherit; font-size: 12px; color: var(--ink-soft);
+    background: transparent; border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 14px; cursor: pointer;
+  }
+  .pending-box {
+    text-align: center; font-size: 13px; color: var(--ink-soft); line-height: 1.7;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 18px;
+  }
+
+  .throwback-heading { font-size: 13px; font-weight: 700; color: var(--accent); margin: 0 0 8px; }
+  .feed { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .post-card {
+    background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--tag, var(--accent));
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .meta { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+  .name { font-weight: 700; font-size: 14px; color: var(--tag, var(--accent)); }
+  .time { font-size: 12px; color: var(--ink-soft); }
+  .text { font-size: 15px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
   .empty { text-align: center; color: var(--ink-soft); font-size: 14px; padding: 40px 12px; }
+
+  .admin-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 24px;
+  }
+  .admin-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; gap: 10px;
+  }
+  .admin-row:last-child { border-bottom: none; }
+  .admin-row .email { word-break: break-all; }
+  .admin-row button {
+    font-family: inherit; font-size: 12px; font-weight: 700; border: none; border-radius: 999px;
+    padding: 6px 12px; cursor: pointer; white-space: nowrap;
+  }
+  .approve-btn { background: var(--accent); color: #fff; }
+  .revoke-btn { background: transparent; color: var(--ink-soft); border: 1px solid var(--line) !important; }
+  .status-tag { font-size: 11px; color: var(--ink-soft); }
 </style>
 </head>
 <body>
@@ -54,14 +90,34 @@
       <div class="msg" id="msg"></div>
     </div>
 
-    <div class="empty">今日届いているつぶやきはありません。</div>
+    <div class="login-link" id="loginLink">
+      <button id="loginBtn">家族の方はこちら（ログイン）</button>
+    </div>
+
+    <div class="pending-box" id="pendingBox" style="display:none;">
+      ログインありがとうございます。<br>まだ閲覧の承認待ちです。<br>カーシーさんに承認をお願いしてください。
+    </div>
+
+    <div id="adminPanel" class="admin-card" style="display:none;">
+      <p class="throwback-heading" style="margin-bottom:10px;">閲覧できる人の管理</p>
+      <div id="adminList"></div>
+    </div>
+
+    <div id="throwback"></div>
+    <div id="feed"></div>
   </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
+  // ここをカーシーさんのGoogleアカウントのメールアドレスに変更してください。
+  const ADMIN_EMAIL = "kashi0125@gmail.com";
+
+  const auth = firebase.auth();
   const db = firebase.firestore();
+
   const nameEl = document.getElementById('name');
   const textEl = document.getElementById('text');
   const btn = document.getElementById('btn');
@@ -87,6 +143,114 @@
       msg.textContent = '送信に失敗しました。もう一度お試しください。';
     }
     btn.disabled = false;
+  });
+
+  const loginLink = document.getElementById('loginLink');
+  const pendingBox = document.getElementById('pendingBox');
+  const adminPanel = document.getElementById('adminPanel');
+  const adminList = document.getElementById('adminList');
+  const feed = document.getElementById('feed');
+  const throwback = document.getElementById('throwback');
+
+  document.getElementById('loginBtn').addEventListener('click', () => {
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  });
+
+  function startOfDay(ts) { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
+  function daysAgo(ts) { return Math.round((startOfDay(Date.now()) - startOfDay(ts)) / 86400000); }
+  function yearsAgo(ts) {
+    const d = new Date(ts), now = new Date();
+    let y = now.getFullYear() - d.getFullYear();
+    if (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) y--;
+    return y;
+  }
+  function isAnniversaryToday(ts) {
+    const d = new Date(ts), now = new Date();
+    return d.getMonth() === now.getMonth() && d.getDate() === now.getDate() && yearsAgo(ts) >= 1;
+  }
+  function tagColor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    return `hsl(${h}, 45%, 40%)`;
+  }
+  function esc(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function postedOnLabel(ts) {
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}/${d.getDate()}のつぶやき`;
+  }
+  function cardHtml(p, timeLabel) {
+    return `
+      <div class="post-card" style="--tag:${tagColor(p.name || '')}">
+        <div class="meta"><span class="name">${esc(p.name || '名無し')}</span><span class="time">${timeLabel}</span></div>
+        <div class="text">${esc(p.text || '')}</div>
+      </div>`;
+  }
+  function renderFeed(posts) {
+    const throwbacks = posts.filter(p => isAnniversaryToday(p.timestamp)).sort((a, b) => b.timestamp - a.timestamp);
+    throwback.innerHTML = throwbacks.length
+      ? '<p class="throwback-heading">1年前の今日のつぶやき</p><div class="feed">' +
+        throwbacks.map(p => cardHtml(p, `${yearsAgo(p.timestamp)}年前のつぶやき`)).join('') + '</div>'
+      : '';
+    const week = posts.filter(p => daysAgo(p.timestamp) === 7).sort((a, b) => b.timestamp - a.timestamp);
+    feed.innerHTML = week.length
+      ? week.map(p => cardHtml(p, postedOnLabel(p.timestamp))).join('')
+      : (throwbacks.length ? '' : '<div class="empty">今日届いているつぶやきはありません。</div>');
+  }
+  function renderAdmin(users) {
+    adminList.innerHTML = users.map(u => `
+      <div class="admin-row">
+        <span class="email">${esc(u.email || '')}<br><span class="status-tag">${u.approved ? '許可済み' : '承認待ち'}</span></span>
+        ${u.approved
+          ? `<button class="revoke-btn" data-id="${u.id}" data-action="revoke">取り消す</button>`
+          : `<button class="approve-btn" data-id="${u.id}" data-action="approve">許可する</button>`}
+      </div>
+    `).join('') || '<p style="font-size:13px;color:var(--ink-soft);">まだ誰もログインしていません。</p>';
+    adminList.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        db.collection('allowed_users').doc(b.dataset.id).update({ approved: b.dataset.action === 'approve' });
+      });
+    });
+  }
+
+  auth.onAuthStateChanged(async user => {
+    loginLink.style.display = 'block';
+    pendingBox.style.display = 'none';
+    adminPanel.style.display = 'none';
+    throwback.innerHTML = '';
+    feed.innerHTML = '';
+
+    if (!user) return;
+
+    const isAdmin = user.email === ADMIN_EMAIL;
+    const ref = db.collection('allowed_users').doc(user.uid);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      await ref.set({ email: user.email, approved: isAdmin, addedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+    const approved = isAdmin || (snap.exists && snap.data().approved);
+
+    loginLink.style.display = 'none';
+
+    if (!approved) {
+      pendingBox.style.display = 'block';
+      return;
+    }
+
+    if (isAdmin) {
+      adminPanel.style.display = 'block';
+      db.collection('allowed_users').onSnapshot(s => renderAdmin(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    }
+
+    db.collection('posts').orderBy('timestamp', 'desc').limit(500).onSnapshot(snap => {
+      const posts = snap.docs.map(d => {
+        const data = d.data();
+        const ts = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate().getTime() : Date.now();
+        return { id: d.id, name: data.name, text: data.text, timestamp: ts };
+      });
+      renderFeed(posts);
+    });
   });
 </script>
 </body>
