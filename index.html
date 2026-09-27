@@ -78,7 +78,7 @@
   <div class="wrap">
     <header>
       <h1>ひとこと便り</h1>
-      <p class="sub">1週間後に家族にそっと届きます。（他人には公開されません）</p>
+      <p class="sub">1週間後に家族にそっと届きます。<br>誰がつぶやいたかもわかりません。<br>家族以外の人は、つぶやけますが、見れません。</p>
     </header>
 
     <div class="card">
@@ -196,9 +196,10 @@
         throwbacks.map(p => cardHtml(p, `${yearsAgo(p.timestamp)}年前のつぶやき`)).join('') + '</div>'
       : '';
     const week = posts.filter(p => daysAgo(p.timestamp) === 7).sort((a, b) => b.timestamp - a.timestamp);
+    const countLine = `<p class="throwback-heading">1週間前のつぶやき（${week.length}件）</p>`;
     feed.innerHTML = week.length
-      ? week.map(p => cardHtml(p, postedOnLabel(p.timestamp))).join('')
-      : (throwbacks.length ? '' : '<div class="empty">今日届いているつぶやきはありません。</div>');
+      ? countLine + week.map(p => cardHtml(p, postedOnLabel(p.timestamp))).join('')
+      : countLine + (throwbacks.length ? '' : '<div class="empty">今日届いているつぶやきはありません。</div>');
   }
   function renderAdmin(users) {
     adminList.innerHTML = users.map(u => `
