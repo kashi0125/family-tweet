@@ -154,8 +154,9 @@
 
   document.getElementById('loginBtn').addEventListener('click', () => {
     auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => {
+      console.error(err);
       pendingBox.style.display = 'block';
-      pendingBox.textContent = 'ログインエラー: ' + err.code + ' / ' + err.message;
+      pendingBox.textContent = '初ログインの場合は、管理者の承認を得た後に閲覧が可能になります。未承認でも投稿は可能です。';
     });
   });
 
