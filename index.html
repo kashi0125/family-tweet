@@ -95,7 +95,11 @@
     </div>
 
     <div class="pending-box" id="pendingBox" style="display:none;">
-      ログインありがとうございます。<br>まだ閲覧の承認待ちです。<br>カーシーさんに承認をお願いしてください。
+      ログインありがとうございます。<br>管理者の承認後に閲覧が可能になります。
+    </div>
+
+    <div class="login-link" id="logoutLink" style="display:none;">
+      <button id="logoutBtn">ログアウト</button>
     </div>
 
     <div id="adminPanel" class="admin-card" style="display:none;">
@@ -146,11 +150,14 @@
   });
 
   const loginLink = document.getElementById('loginLink');
+  const logoutLink = document.getElementById('logoutLink');
   const pendingBox = document.getElementById('pendingBox');
   const adminPanel = document.getElementById('adminPanel');
   const adminList = document.getElementById('adminList');
   const feed = document.getElementById('feed');
   const throwback = document.getElementById('throwback');
+
+  document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
 
   document.getElementById('loginBtn').addEventListener('click', () => {
     auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => {
@@ -220,12 +227,15 @@
 
   auth.onAuthStateChanged(async user => {
     loginLink.style.display = 'block';
+    logoutLink.style.display = 'none';
     pendingBox.style.display = 'none';
     adminPanel.style.display = 'none';
     throwback.innerHTML = '';
     feed.innerHTML = '';
 
     if (!user) return;
+
+    logoutLink.style.display = 'block';
 
     const isAdmin = user.email === ADMIN_EMAIL;
     const ref = db.collection('allowed_users').doc(user.uid);
