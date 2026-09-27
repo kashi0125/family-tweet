@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ひとこと便り</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #EFEAE0; --card: #FBF8F2; --ink: #2E2A25;
+    --ink-soft: #6B6459; --line: #DCD3C0; --accent: #2F6259;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink);
+    font-family: "Zen Maru Gothic", sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  h1 { font-size: 20px; font-weight: 900; margin: 0 0 4px; }
+  .sub { font-size: 13px; color: var(--ink-soft); margin: 0 0 18px; }
+  label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+  input, textarea {
+    width: 100%; font-family: inherit; font-size: 15px; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+    background: #fff; margin-bottom: 14px;
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  button.post {
+    width: 100%; font-family: inherit; font-size: 15px; font-weight: 700;
+    background: var(--accent); color: #fff; border: none; border-radius: 999px; padding: 12px; cursor: pointer;
+  }
+  button.post:disabled { opacity: .5; }
+  .msg { margin-top: 14px; font-size: 13px; color: var(--accent); text-align: center; min-height: 16px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>ひとこと便り</h1>
+    <p class="sub">思ったことを、ひとこと置いていってください</p>
+    <label>お名前（ニックネームでOK）</label>
+    <input id="name" maxlength="20" placeholder="なまえ">
+    <label>ひとこと</label>
+    <textarea id="text" maxlength="500" placeholder="いま思ったこと"></textarea>
+    <button class="post" id="btn">つぶやく</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  const db = firebase.firestore();
+  const nameEl = document.getElementById('name');
+  const textEl = document.getElementById('text');
+  const btn = document.getElementById('btn');
+  const msg = document.getElementById('msg');
+
+  btn.addEventListener('click', async () => {
+    const name = nameEl.value.trim();
+    const text = textEl.value.trim();
+    if (!name || !text) {
+      msg.textContent = '名前とひとことを入力してください。';
+      return;
+    }
+    btn.disabled = true;
+    msg.textContent = '送信中…';
+    try {
+      await db.collection('posts').add({
+        name, text,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      textEl.value = '';
+      msg.textContent = '届きました。1週間後にそっと公開されます。';
+    } catch (e) {
+      msg.textContent = '送信に失敗しました。もう一度お試しください。';
+    }
+    btn.disabled = false;
+  });
+</script>
+</body>
+</html>
