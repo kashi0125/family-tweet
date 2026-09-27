@@ -153,10 +153,10 @@
   const throwback = document.getElementById('throwback');
 
   document.getElementById('loginBtn').addEventListener('click', () => {
-    auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
-  });
-  auth.getRedirectResult().catch(err => {
-    msg.textContent = 'ログインに失敗しました。もう一度お試しください。';
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => {
+      pendingBox.style.display = 'block';
+      pendingBox.textContent = 'ログインエラー: ' + err.code + ' / ' + err.message;
+    });
   });
 
   function startOfDay(ts) { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
