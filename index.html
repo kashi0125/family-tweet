@@ -198,7 +198,7 @@
         throwbacks.map(p => cardHtml(p, `${yearsAgo(p.timestamp)}年前のつぶやき`)).join('') + '</div>'
       : '';
     const pendingCount = posts.filter(p => daysAgo(p.timestamp) < 7).length;
-    const pendingLine = isAdminViewer ? `<p class="throwback-heading">1週間後に表示予定のつぶやき（${pendingCount}件）</p>` : '';
+    const pendingLine = isAdminViewer ? `<p class="throwback-heading">公開待ちのつぶやき（${pendingCount}件）</p>` : '';
     const week = posts.filter(p => daysAgo(p.timestamp) === 7).sort((a, b) => b.timestamp - a.timestamp);
     feed.innerHTML = pendingLine + (week.length
       ? '<div class="feed">' + week.map(p => cardHtml(p, postedOnLabel(p.timestamp))).join('') + '</div>'
