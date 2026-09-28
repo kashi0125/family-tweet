@@ -105,8 +105,8 @@
       <div id="adminList"></div>
     </div>
 
-    <div id="throwback"></div>
     <div id="feed"></div>
+    <div id="throwback"></div>
   </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -189,17 +189,19 @@
         <div class="text">${esc(p.text || '')}</div>
       </div>`;
   }
+  let isAdminViewer = false;
+
   function renderFeed(posts) {
-    const throwbacks = posts.filter(p => isAnniversaryToday(p.timestamp)).sort((a, b) => b.timestamp - a.timestamp);
+    const throwbacks = posts.filter(p => isAnniversaryToday(p.timestamp)).sort((a, b) => yearsAgo(a.timestamp) - yearsAgo(b.timestamp) || b.timestamp - a.timestamp);
     throwback.innerHTML = throwbacks.length
       ? '<p class="throwback-heading">1年前の今日のつぶやき</p><div class="feed">' +
         throwbacks.map(p => cardHtml(p, `${yearsAgo(p.timestamp)}年前のつぶやき`)).join('') + '</div>'
       : '';
     const pendingCount = posts.filter(p => daysAgo(p.timestamp) < 7).length;
-    const pendingLine = `<p class="throwback-heading">1週間後に表示予定のつぶやき（${pendingCount}件）</p>`;
+    const pendingLine = isAdminViewer ? `<p class="throwback-heading">1週間後に表示予定のつぶやき（${pendingCount}件）</p>` : '';
     const week = posts.filter(p => daysAgo(p.timestamp) === 7).sort((a, b) => b.timestamp - a.timestamp);
     feed.innerHTML = pendingLine + (week.length
-      ? week.map(p => cardHtml(p, postedOnLabel(p.timestamp))).join('')
+      ? '<div class="feed">' + week.map(p => cardHtml(p, postedOnLabel(p.timestamp))).join('') + '</div>'
       : (throwbacks.length ? '' : '<div class="empty">今日届いているつぶやきはありません。</div>'));
   }
   function renderAdmin(users) {
@@ -219,6 +221,7 @@
   }
 
   auth.onAuthStateChanged(async user => {
+    isAdminViewer = false;
     loginLink.style.display = 'block';
     logoutLink.style.display = 'none';
     pendingBox.style.display = 'none';
@@ -231,6 +234,7 @@
     logoutLink.style.display = 'block';
 
     const isAdmin = user.email === ADMIN_EMAIL;
+    isAdminViewer = isAdmin;
     const ref = db.collection('allowed_users').doc(user.uid);
     const snap = await ref.get();
     if (!snap.exists) {
