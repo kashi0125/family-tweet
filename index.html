@@ -101,7 +101,7 @@
       <button id="logoutBtn">ログアウト</button>
     </div>
 
-    <div id="flowerBox" style="display:none;text-align:center;margin-bottom:20px;"></div>
+    <div id="flowerBox" style="text-align:center;margin-bottom:20px;"></div>
 
     <div id="feed"></div>
     <div id="throwback"></div>
@@ -122,6 +122,11 @@
 
   const auth = firebase.auth();
   const db = firebase.firestore();
+  const statsRef = db.collection('stats').doc('summary');
+  statsRef.onSnapshot(
+    snap => renderFlower(snap.exists ? (snap.data().pendingCount || 0) : 0),
+    () => renderFlower(0)
+  );
 
   const textEl = document.getElementById('text');
   const btn = document.getElementById('btn');
@@ -140,6 +145,7 @@
         text,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
+      statsRef.set({ pendingCount: firebase.firestore.FieldValue.increment(1) }, { merge: true }).catch(() => {});
       textEl.value = '';
       msg.textContent = '送信完了しました';
     } catch (e) {
@@ -207,21 +213,21 @@
     feed.innerHTML = pendingLine + (week.length
       ? '<div class="feed">' + week.map(p => cardHtml(p, postedOnLabel(p.timestamp))).join('') + '</div>'
       : (throwbacks.length ? '' : '<div class="empty">今日届いているつぶやきはありません。</div>'));
-    renderFlower(pendingCount);
+    statsRef.set({ pendingCount }, { merge: true }).catch(() => {});
   }
 
-  function flowerSvg(stage) {
+  function flowerSvg(stage, color) {
     // stage: 0=枯れかけ 1=つぼみ 2=咲きはじめ 3=満開
     const stems = {
-      0: 'M60 100 Q56 70 62 46',
-      1: 'M60 100 Q58 68 60 44',
-      2: 'M60 100 Q60 66 60 40',
-      3: 'M60 100 Q60 64 60 36'
+      0: 'M50 100 Q46 70 52 46',
+      1: 'M50 100 Q48 68 50 44',
+      2: 'M50 100 Q50 66 50 40',
+      3: 'M50 100 Q50 64 50 36'
     };
-    const petalColors = { 0: '#B7A98F', 1: '#9BB79E', 2: '#6FA89B', 3: '#2F6259' };
-    const centerColors = { 0: '#8F866F', 1: '#D8C77A', 2: '#E8B23D', 3: '#E8A33D' };
+    const centerColors = { 0: '#8F866F', 1: '#D8C77A', 2: color, 3: color };
     const leafOpacity = { 0: 0.35, 1: 0.6, 2: 0.85, 3: 1 };
-    const cx = stage === 0 ? 62 : 60;
+    const petalOpacity = { 0: 0.4, 1: 0.6, 2: 0.85, 3: 1 };
+    const cx = stage === 0 ? 52 : 50;
     const cy = stage === 0 ? 50 : stage === 1 ? 42 : stage === 2 ? 38 : 34;
     const petalR = stage === 0 ? 5 : stage === 1 ? 6 : stage === 2 ? 9 : 11;
     const petalCount = stage === 0 ? 4 : stage === 1 ? 5 : 6;
@@ -231,13 +237,13 @@
       const dist = stage === 0 ? 6 : petalR + 2;
       const px = cx + Math.cos(angle) * dist;
       const py = cy + Math.sin(angle) * dist;
-      petals += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${petalR}" fill="${petalColors[stage]}" opacity="${stage === 0 ? 0.6 : 0.9}"/>`;
+      petals += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${petalR}" fill="${color}" opacity="${petalOpacity[stage]}"/>`;
     }
     return `
-      <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-        <path d="${stems[stage]}" stroke="${petalColors[stage]}" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M60 78 Q46 72 42 82" stroke="${petalColors[stage]}" stroke-width="3" fill="none" stroke-linecap="round" opacity="${leafOpacity[stage]}"/>
-        <path d="M62 88 Q76 84 80 94" stroke="${petalColors[stage]}" stroke-width="3" fill="none" stroke-linecap="round" opacity="${leafOpacity[stage]}"/>
+      <svg width="100" height="110" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+        <path d="${stems[stage]}" stroke="#6B8F6B" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M50 78 Q36 72 32 82" stroke="#6B8F6B" stroke-width="3" fill="none" stroke-linecap="round" opacity="${leafOpacity[stage]}"/>
+        <path d="M52 88 Q66 84 70 94" stroke="#6B8F6B" stroke-width="3" fill="none" stroke-linecap="round" opacity="${leafOpacity[stage]}"/>
         ${petals}
         <circle cx="${cx}" cy="${cy}" r="${stage === 0 ? 4 : 6}" fill="${centerColors[stage]}"/>
       </svg>`;
@@ -249,8 +255,13 @@
     else if (pendingCount <= 2) { stage = 1; caption = 'つぼみがふくらんできました'; }
     else if (pendingCount <= 5) { stage = 2; caption = '花が咲きはじめました'; }
     else { stage = 3; caption = 'たくさんのつぶやきで満開です'; }
+    const colors = ['#E8B23D', '#3B6EA5', '#C0392B'];
     flowerBox.style.display = 'block';
-    flowerBox.innerHTML = flowerSvg(stage) + `<p class="flower-caption">${caption}</p>`;
+    flowerBox.innerHTML =
+      '<div style="display:flex;justify-content:center;gap:4px;">' +
+      colors.map(c => flowerSvg(stage, c)).join('') +
+      '</div>' +
+      `<p class="flower-caption">${caption}</p>`;
   }
   function renderAdmin(users) {
     adminList.innerHTML = users.map(u => `
@@ -275,7 +286,6 @@
     pendingBox.style.display = 'none';
     adminPanel.style.display = 'none';
     throwback.innerHTML = '';
-    flowerBox.style.display = 'none';
     feed.innerHTML = '';
 
     if (!user) return;
