@@ -72,6 +72,7 @@
   .approve-btn { background: var(--accent); color: #fff; }
   .revoke-btn { background: transparent; color: var(--ink-soft); border: 1px solid var(--line) !important; }
   .status-tag { font-size: 11px; color: var(--ink-soft); }
+  .flower-caption { font-size: 12px; color: var(--ink-soft); margin: 6px 0 0; }
 </style>
 </head>
 <body>
@@ -99,6 +100,8 @@
     <div class="login-link" id="logoutLink" style="display:none;">
       <button id="logoutBtn">ログアウト</button>
     </div>
+
+    <div id="flowerBox" style="display:none;text-align:center;margin-bottom:20px;"></div>
 
     <div id="feed"></div>
     <div id="throwback"></div>
@@ -152,6 +155,7 @@
   const adminList = document.getElementById('adminList');
   const feed = document.getElementById('feed');
   const throwback = document.getElementById('throwback');
+  const flowerBox = document.getElementById('flowerBox');
 
   document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
 
@@ -203,6 +207,50 @@
     feed.innerHTML = pendingLine + (week.length
       ? '<div class="feed">' + week.map(p => cardHtml(p, postedOnLabel(p.timestamp))).join('') + '</div>'
       : (throwbacks.length ? '' : '<div class="empty">今日届いているつぶやきはありません。</div>'));
+    renderFlower(pendingCount);
+  }
+
+  function flowerSvg(stage) {
+    // stage: 0=枯れかけ 1=つぼみ 2=咲きはじめ 3=満開
+    const stems = {
+      0: 'M60 100 Q56 70 62 46',
+      1: 'M60 100 Q58 68 60 44',
+      2: 'M60 100 Q60 66 60 40',
+      3: 'M60 100 Q60 64 60 36'
+    };
+    const petalColors = { 0: '#B7A98F', 1: '#9BB79E', 2: '#6FA89B', 3: '#2F6259' };
+    const centerColors = { 0: '#8F866F', 1: '#D8C77A', 2: '#E8B23D', 3: '#E8A33D' };
+    const leafOpacity = { 0: 0.35, 1: 0.6, 2: 0.85, 3: 1 };
+    const cx = stage === 0 ? 62 : 60;
+    const cy = stage === 0 ? 50 : stage === 1 ? 42 : stage === 2 ? 38 : 34;
+    const petalR = stage === 0 ? 5 : stage === 1 ? 6 : stage === 2 ? 9 : 11;
+    const petalCount = stage === 0 ? 4 : stage === 1 ? 5 : 6;
+    let petals = '';
+    for (let i = 0; i < petalCount; i++) {
+      const angle = (Math.PI * 2 * i) / petalCount;
+      const dist = stage === 0 ? 6 : petalR + 2;
+      const px = cx + Math.cos(angle) * dist;
+      const py = cy + Math.sin(angle) * dist;
+      petals += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${petalR}" fill="${petalColors[stage]}" opacity="${stage === 0 ? 0.6 : 0.9}"/>`;
+    }
+    return `
+      <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <path d="${stems[stage]}" stroke="${petalColors[stage]}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M60 78 Q46 72 42 82" stroke="${petalColors[stage]}" stroke-width="3" fill="none" stroke-linecap="round" opacity="${leafOpacity[stage]}"/>
+        <path d="M62 88 Q76 84 80 94" stroke="${petalColors[stage]}" stroke-width="3" fill="none" stroke-linecap="round" opacity="${leafOpacity[stage]}"/>
+        ${petals}
+        <circle cx="${cx}" cy="${cy}" r="${stage === 0 ? 4 : 6}" fill="${centerColors[stage]}"/>
+      </svg>`;
+  }
+
+  function renderFlower(pendingCount) {
+    let stage, caption;
+    if (pendingCount <= 0) { stage = 0; caption = 'つぶやきが少なくて、花が元気をなくしています'; }
+    else if (pendingCount <= 2) { stage = 1; caption = 'つぼみがふくらんできました'; }
+    else if (pendingCount <= 5) { stage = 2; caption = '花が咲きはじめました'; }
+    else { stage = 3; caption = 'たくさんのつぶやきで満開です'; }
+    flowerBox.style.display = 'block';
+    flowerBox.innerHTML = flowerSvg(stage) + `<p class="flower-caption">${caption}</p>`;
   }
   function renderAdmin(users) {
     adminList.innerHTML = users.map(u => `
@@ -227,6 +275,7 @@
     pendingBox.style.display = 'none';
     adminPanel.style.display = 'none';
     throwback.innerHTML = '';
+    flowerBox.style.display = 'none';
     feed.innerHTML = '';
 
     if (!user) return;
